@@ -1,55 +1,53 @@
-// include other header files as needed
-#include"mems.h"
-
+#include "mems.h"
+#include <stdio.h>
 
 int main(int argc, char const *argv[])
 {
-    // initialise the MeMS system 
+    // Initialize the MeMS system
     mems_init();
     int* ptr[10];
 
-    /*
-    This allocates 10 arrays of 250 integers each
-    */
-    printf("\n------- Allocated virtual addresses [mems_malloc] -------\n");
-    for(int i=0;i<10;i++){
-        ptr[i] = (int*)mems_malloc(sizeof(int)*250);
-        printf("Virtual address: %lu\n", (unsigned long)ptr[i]);
+    // Allocate 10 arrays of 250 integers each
+    printf("\n------- Allocating virtual addresses [mems_malloc] -------\n");
+    for(int i=0; i<10; i++){
+        ptr[i] = (int*)mems_malloc(sizeof(int) * 250);
+        if (ptr[i] != NULL) {
+            printf("Virtual address for ptr[%d]: %lu\n", i, (unsigned long)ptr[i]);
+        }
     }
 
-    /*
-    In this section we are tring to write value to 1st index of array[0] (here it is 0 based indexing).
-    We get get value of both the 0th index and 1st index of array[0] by using function mems_get.
-    Then we write value to 1st index using 1st index pointer and try to access it via 0th index pointer.
+    // Access and modify data using the MeMS virtual address space
+    printf("\n------ Accessing and writing to a virtual address [mems_get] -----\n");
+    // Get the physical address corresponding to the second element of the first array
+    int* phy_ptr_1 = (int*) mems_get(&ptr[0][1]);
+    
+    // Write a value to the target memory location
+    *phy_ptr_1 = 200;
 
-    This section is show that even if we have allocated an array using mems_malloc but we can 
-    retrive MeMS physical address of any of the element from that array using mems_get. 
-    */
-    printf("\n------ Assigning value to Virtual address [mems_get] -----\n");
-    // how to write to the virtual address of the MeMS (this is given to show that the system works on arrays as well)
-    int* phy_ptr= (int*) mems_get(&ptr[0][1]); // get the address of index 1
-    phy_ptr[0]=200; // put value at index 1
-    int* phy_ptr2= (int*) mems_get(&ptr[0][0]); // get the address of index 0
-    printf("Virtual address: %lu\tPhysical Address: %lu\n",(unsigned long)ptr[0],(unsigned long)phy_ptr2);
-    printf("Value written: %d\n", phy_ptr2[1]); // print the address of index 1 
+    // Get the physical address of the base of the array
+    int* phy_ptr_0 = (int*) mems_get(&ptr[0][0]);
+    printf("Virtual base address: %lu\tPhysical base address: %lu\n", (unsigned long)ptr[0], (unsigned long)phy_ptr_0);
+    
+    // Verify the written value by accessing it via the base pointer
+    printf("Value at index [1]: %d\n", phy_ptr_0[1]);
 
-    /*
-    This shows the stats of the MeMS system.  
-    */
-    printf("\n--------- Printing Stats [mems_print_stats] --------\n");
+    // Display the current memory statistics
+    printf("\n--------- Printing memory stats [mems_print_stats] --------\n");
     mems_print_stats();
 
-    /*
-    This section shows the effect of freeing up space on free list and also the effect of 
-    reallocating the space that will be fullfilled by the free list.
-    */
-    printf("\n--------- Freeing up the memory [mems_free] --------\n");
+    // Demonstrate freeing and re-allocating memory
+    printf("\n--------- Freeing and re-allocating a segment [mems_free] --------\n");
+    printf("Freeing ptr[3]...\n");
     mems_free(ptr[3]);
     mems_print_stats();
-    ptr[3] = (int*)mems_malloc(sizeof(int)*250);
+    
+    printf("\nRe-allocating space for ptr[3]...\n");
+    ptr[3] = (int*)mems_malloc(sizeof(int) * 250);
     mems_print_stats();
 
+    // Clean up and release all memory used by MeMS
     printf("\n--------- Unmapping all memory [mems_finish] --------\n\n");
     mems_finish();
+
     return 0;
 }
